@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2002
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KlearUI", "KlearUI\KlearUI.csproj", "{D2577D98-F46F-42BA-9BE6-4A46726B168B}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "KlearUI.Monogame", "KlearUI.Monogame\KlearUI.Monogame.shproj", "{DD112AFA-2F72-45DC-9E5B-BE0BACD9A6AE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{3EFC1613-1B82-44ED-B9FC-830B6460251A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "KlearUIExample", "Examples\KlearUIExample\KlearUIExample.shproj", "{48CD98C1-5AB6-49F7-A456-62BA6DE6CE5D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonogameDesktopGL", "Examples\Monogame.DesktopGL\MonogameDesktopGL.csproj", "{32D60284-815F-4B68-A5A5-65E244FD33E9}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Examples\KlearUIExample\KlearUIExamples.projitems*{32d60284-815f-4b68-a5a5-65e244fd33e9}*SharedItemsImports = 4
+		KlearUI.Monogame\KlearUI.Monogame.projitems*{32d60284-815f-4b68-a5a5-65e244fd33e9}*SharedItemsImports = 4
+		Examples\KlearUIExample\KlearUIExamples.projitems*{48cd98c1-5ab6-49f7-a456-62ba6de6ce5d}*SharedItemsImports = 13
+		KlearUI.Monogame\KlearUI.Monogame.projitems*{dd112afa-2f72-45dc-9e5b-be0bacd9a6ae}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D2577D98-F46F-42BA-9BE6-4A46726B168B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2577D98-F46F-42BA-9BE6-4A46726B168B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2577D98-F46F-42BA-9BE6-4A46726B168B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2577D98-F46F-42BA-9BE6-4A46726B168B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32D60284-815F-4B68-A5A5-65E244FD33E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32D60284-815F-4B68-A5A5-65E244FD33E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32D60284-815F-4B68-A5A5-65E244FD33E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32D60284-815F-4B68-A5A5-65E244FD33E9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{48CD98C1-5AB6-49F7-A456-62BA6DE6CE5D} = {3EFC1613-1B82-44ED-B9FC-830B6460251A}
+		{32D60284-815F-4B68-A5A5-65E244FD33E9} = {3EFC1613-1B82-44ED-B9FC-830B6460251A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0BD4B550-09A8-4E67-B1C9-2F35944D4E59}
+	EndGlobalSection
+EndGlobal

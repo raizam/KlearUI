@@ -1,0 +1,274 @@
+﻿using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+
+namespace KlearUI.MonoGame
+{
+    public class UIContext : BaseContext
+    {
+        private const int WheelDelta = 120;
+
+        private readonly GraphicsDevice _device;
+        private DynamicVertexBuffer _vertexBuffer;
+        private DynamicIndexBuffer _indexBuffer;
+        private readonly BasicEffect _basicEffect;
+        private readonly List<Texture2D> _textures = new List<Texture2D>();
+        private readonly RasterizerState _rasterizerState = new RasterizerState
+        {
+            CullMode = CullMode.None,
+            ScissorTestEnable = true
+        };
+
+        private BlendState _oldBlendState;
+        private RasterizerState _oldRasterizerState;
+        private SamplerState _oldSamplerState;
+        private DepthStencilState _oldDepthStencilState;
+        private KeyboardState _previousKeyboardState;
+
+        private int _previousWheel;
+
+        public List<Texture2D> Textures
+        {
+            get { return _textures; }
+        }
+
+        public UIContext(GraphicsDevice device)
+        {
+            _device = device;
+            _vertexBuffer = new DynamicVertexBuffer(device, VertexPositionColorTexture.VertexDeclaration, 2000,
+                BufferUsage.WriteOnly);
+            _indexBuffer = new DynamicIndexBuffer(device, typeof(ushort), 6000, BufferUsage.WriteOnly);
+            _basicEffect = new BasicEffect(device);
+
+            ConvertConfig.VertexSize = (uint)VertexPositionColorTexture.VertexDeclaration.VertexStride;
+
+            ConvertConfig.VertexLayout = new[]
+            {
+                new nk_draw_vertex_layout_element
+                {
+                    attribute = VertexLayoutKind.Position,
+                    format = VertexLayoutFormat.FLOAT,
+                    offset = 0
+                },
+                new nk_draw_vertex_layout_element
+                {
+                    attribute = VertexLayoutKind.Color,
+                    format = VertexLayoutFormat.B8G8R8A8,
+                    offset = 12
+                },
+                new nk_draw_vertex_layout_element
+                {
+                    attribute = VertexLayoutKind.TexCoord,
+                    format = VertexLayoutFormat.FLOAT,
+                    offset = 16
+                },
+                new nk_draw_vertex_layout_element
+                {
+                    attribute = VertexLayoutKind.COUNT
+                }
+            };
+        }
+
+        public int CreateTexture(Texture2D texture)
+        {
+            _textures.Add(texture);
+
+            return _textures.Count;
+        }
+
+        public override int CreateTexture(int width, int height, byte[] data)
+        {
+            var texture = new Texture2D(_device, width, height, false, SurfaceFormat.Color);
+            texture.SetData(data, 0, data.Length);
+
+            return CreateTexture(texture);
+        }
+
+        private static void GetProjectionMatrix(int width, int height, out Matrix mtx)
+        {
+            const float l = 0.5f;
+            var r = width + 0.5f;
+            const float T = 0.5f;
+            var b = height + 0.5f;
+            mtx = new Matrix(2.0f / (r - l), 0.0f, 0.0f, 0.0f, 0.0f, 2.0f / (T - b), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                (r + l) / (l - r), (T + b) / (b - T), 0.0f, 1.0f);
+        }
+
+        protected override void BeginDraw()
+        {
+            UpdateInput();
+
+            _basicEffect.World = Matrix.Identity;
+            Matrix projection;
+            GetProjectionMatrix(_device.PresentationParameters.Bounds.Width, _device.PresentationParameters.Bounds.Height,
+                out projection);
+            _basicEffect.Projection = projection;
+            _basicEffect.VertexColorEnabled = true;
+            _basicEffect.TextureEnabled = true;
+            _basicEffect.LightingEnabled = false;
+            _device.SetVertexBuffer(_vertexBuffer);
+            _device.Indices = _indexBuffer;
+
+            _oldSamplerState = _device.SamplerStates[0];
+            _oldBlendState = _device.BlendState;
+            _oldDepthStencilState = _device.DepthStencilState;
+            _oldRasterizerState = _device.RasterizerState;
+
+            _device.SamplerStates[0] = SamplerState.LinearClamp;
+            _device.BlendState = BlendState.NonPremultiplied;
+            _device.DepthStencilState = DepthStencilState.None;
+            _device.RasterizerState = _rasterizerState;
+        }
+
+        protected override unsafe void SetBuffers(byte[] vertices, ushort[] indices, int indicesCount, int vertexCount)
+        {
+            if (vertexCount == 0) return;
+
+            var result = new VertexPositionColorTexture[vertexCount];
+
+            fixed (VertexPositionColorTexture* vx = &result[0])
+            {
+                var b = (byte*)vx;
+                for (int i = 0; i < vertexCount * sizeof(VertexPositionColorTexture); i++)
+                {
+                    *(b + i) = vertices[i];
+                }
+            }
+
+            for (var i = 0; i < vertexCount; i++)
+            {
+                var c = result[i].Color;
+                result[i].Color = new Color(c.B, c.G, c.R, c.A);
+            }
+
+            if (_vertexBuffer.VertexCount < result.Length)
+            {
+                // Resize vertex buffer if data doesnt fit
+                _vertexBuffer = new DynamicVertexBuffer(_device, VertexPositionColorTexture.VertexDeclaration, result.Length * 2,
+                    BufferUsage.WriteOnly);
+            }
+            _vertexBuffer.SetData(result);
+
+
+            if (_indexBuffer.IndexCount < indicesCount)
+            {
+                // Resize index buffer if data doesnt fit
+                _indexBuffer = new DynamicIndexBuffer(_device, typeof(ushort), indicesCount * 2, BufferUsage.WriteOnly);
+            }
+
+            _indexBuffer.SetData(indices, 0, indicesCount);
+        }
+
+        protected override void Draw(int x, int y, int w, int h, int textureId, int startIndex, int primitiveCount)
+        {
+            _device.ScissorRectangle = new Rectangle(x, y, w, h);
+            if (textureId != 0)
+            {
+                _basicEffect.TextureEnabled = true;
+                _basicEffect.Texture = _textures[textureId - 1];
+            }
+            else _basicEffect.TextureEnabled = false;
+
+            foreach (var pass in _basicEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                _device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, startIndex, primitiveCount);
+            }
+        }
+
+        protected override void EndDraw()
+        {
+            _device.SamplerStates[0] = _oldSamplerState;
+            _device.BlendState = _oldBlendState;
+            _device.DepthStencilState = _oldDepthStencilState;
+            _device.RasterizerState = _oldRasterizerState;
+        }
+
+        private void UpdateInput()
+        {
+            var mouseState = Mouse.GetState();
+            var keyboardState = Keyboard.GetState();
+
+            InputBegin();
+
+            InputKey(ControlKeys.Del, keyboardState.IsKeyDown(Keys.Delete));
+            InputKey(ControlKeys.Enter, keyboardState.IsKeyDown(Keys.Enter));
+            InputKey(ControlKeys.Tab, keyboardState.IsKeyDown(Keys.Tab));
+            InputKey(ControlKeys.Backspace, keyboardState.IsKeyDown(Keys.Back));
+            InputKey(ControlKeys.Left, keyboardState.IsKeyDown(Keys.Left));
+            InputKey(ControlKeys.Right, keyboardState.IsKeyDown(Keys.Right));
+            InputKey(ControlKeys.Up, keyboardState.IsKeyDown(Keys.Up));
+            InputKey(ControlKeys.Down, keyboardState.IsKeyDown(Keys.Down));
+            if (keyboardState.IsKeyDown(Keys.LeftControl) ||
+                keyboardState.IsKeyDown(Keys.RightControl))
+            {
+                InputKey(ControlKeys.Copy, keyboardState.IsKeyDown(Keys.C));
+                InputKey(ControlKeys.Paste, keyboardState.IsKeyDown(Keys.P));
+                InputKey(ControlKeys.Cut, keyboardState.IsKeyDown(Keys.X));
+                InputKey(ControlKeys.Cut, keyboardState.IsKeyDown(Keys.E));
+                InputKey(ControlKeys.Shift, true);
+            }
+            else
+            {
+                InputKey(ControlKeys.Copy, false);
+                InputKey(ControlKeys.Paste, false);
+                InputKey(ControlKeys.Cut, false);
+                InputKey(ControlKeys.Shift, false);
+            }
+
+            var isShiftDown = keyboardState.IsKeyDown(Keys.LeftShift) ||
+                              keyboardState.IsKeyDown(Keys.RightShift);
+
+            var pressedKeys = keyboardState.GetPressedKeys();
+            for (var i = 0; i < pressedKeys.Length; ++i)
+            {
+                var key = pressedKeys[i];
+                if (!_previousKeyboardState.IsKeyDown(key))
+                {
+                    var ch = key.ToChar(isShiftDown);
+                    if (ch != null)
+                    {
+                        InputChar(ch.Value);
+                    }
+                }
+            }
+
+            InputButton(MouseButtons.Left, mouseState.X, mouseState.Y, mouseState.LeftButton == ButtonState.Pressed);
+            InputButton(MouseButtons.Middle, mouseState.X, mouseState.Y, mouseState.MiddleButton == ButtonState.Pressed);
+            InputButton(MouseButtons.Right, mouseState.X, mouseState.Y, mouseState.RightButton == ButtonState.Pressed);
+
+            InputMotion(mouseState.X, mouseState.Y);
+            InputScroll(new NkVec2 { x = 0, y = (mouseState.ScrollWheelValue - _previousWheel) / WheelDelta });
+            InputEnd();
+
+            _previousWheel = mouseState.ScrollWheelValue;
+            _previousKeyboardState = keyboardState;
+        }
+
+        public bool BeginTitled(string name, string title, Rectangle bounds, PanelFlags flags)
+        {
+            return BeginTitled(name, title, bounds.ToRect(), flags);
+        }
+
+        public bool ButtonColor(Color color)
+        {
+            return ButtonColor(color.ToNkColor());
+        }
+
+        public void LabelColored(string str, Align align, Color color)
+        {
+            LabelColored(str, align, color.ToNkColor());
+        }
+
+        public bool ComboBeginColor(Color color, Vector2 size)
+        {
+            return ComboBeginColor(color.ToNkColor(), size.ToNkVec2());
+        }
+
+        public Color ColorPicker(Color color, ColorFormat fmt)
+        {
+            return ColorPicker(color.ToNkColorf(), fmt).ToColor();
+        }
+    }
+}
